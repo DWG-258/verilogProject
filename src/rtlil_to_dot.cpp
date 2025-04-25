@@ -12,10 +12,10 @@ RTLILToDot::RTLILToDot(Lexer& lexer)
     currentTokenIndex = 0;
     currentToken = tokens[currentTokenIndex];
 
-    for (auto& i : tokens)
-    {
-        std::cout << i.value << std::endl;
-    }
+    //for (auto& i : tokens)
+    //{
+    //    std::cout << i.value << std::endl;
+    //}
 }
 
 
@@ -24,10 +24,20 @@ RTLILToDot::RTLILToDot(Lexer& lexer)
 //TO DO 修改以匹配RTLIL格式文件
 void RTLILToDot::read_file()
 {
-    while (currentToken.value != "endmodule")
+    while (currentToken.type!=END_OF_INPUT)
     {
-
-        if (currentToken.value== "input") {
+        gen_module();
+        //解析完模组，解析下一个
+        currentToken = tokens[++currentTokenIndex];
+        ++moduleID;
+    }
+ 
+}
+void RTLILToDot::gen_module()
+{
+    while(currentToken.value!="endmodule")
+    {
+        if (currentToken.value == "input") {
             gen_input();
             currentToken = tokens[++currentTokenIndex];
         }
@@ -36,42 +46,37 @@ void RTLILToDot::read_file()
             currentToken = tokens[++currentTokenIndex];
         }
         else if (currentToken.value == "cell") {
-         
+
             inCell = true;
             gen_cell();
             currentToken = tokens[++currentTokenIndex];
             inCell = false;
         }
         else if (currentToken.value == "connect") {
-            if(!inCell)
-            gen_connection();
+            if (!inCell)
+                gen_connection();
             currentToken = tokens[++currentTokenIndex];
         }
-        else 
+        else
         {
             currentToken = tokens[++currentTokenIndex];
         }
-      
     }
- 
 
-
-
-      
- 
 }
+
 void RTLILToDot::gen_input()
 {
     //should be name
     currentToken = tokens[currentTokenIndex + 3];
-    inputs.push_back(currentToken.value);
+    inputs.push_back(currentToken.value + "_" + std::to_string(moduleID));
 }
 
 void RTLILToDot::gen_output()
 {
     //should be name
     currentToken = tokens[currentTokenIndex + 3];
-    outputs.push_back(currentToken.value);
+    outputs.push_back(currentToken.value + "_" + std::to_string(moduleID));
 }
 
 void RTLILToDot::gen_cell()
@@ -79,23 +84,23 @@ void RTLILToDot::gen_cell()
     //should be type
     currentToken = tokens[++currentTokenIndex];
     Cell* cell = new Cell();
-    cell->type = currentToken.value;
+    cell->type = currentToken.value + "_" + std::to_string(moduleID);
 
     currentToken = tokens[++currentTokenIndex];
-    cell->name= currentToken.value;
+    cell->name= currentToken.value + "_" + std::to_string(moduleID);
     
     //输入
     currentTokenIndex = currentTokenIndex + 3;
     currentToken = tokens[currentTokenIndex];
-    cell->ports["A"] = currentToken.value;
+    cell->ports["A"] = currentToken.value+"_"+std::to_string(moduleID);
 
     currentTokenIndex = currentTokenIndex + 3;
     currentToken = tokens[currentTokenIndex];
-    cell->ports["B"] = currentToken.value;
+    cell->ports["B"] = currentToken.value + "_" + std::to_string(moduleID);
     //输出
     currentTokenIndex = currentTokenIndex + 3;
     currentToken = tokens[currentTokenIndex];
-    cell->ports["Y"] = currentToken.value;
+    cell->ports["Y"] = currentToken.value + "_" + std::to_string(moduleID);
 
     cells.push_back(cell);
 }
@@ -104,10 +109,10 @@ void RTLILToDot::gen_connection()
 {
     currentToken = tokens[++currentTokenIndex];
     Connection* connection = new Connection();
-    connection->dst = currentToken.value;
+    connection->dst = currentToken.value + "_" + std::to_string(moduleID);
 
     currentToken = tokens[++currentTokenIndex];
-    connection->src = currentToken.value;
+    connection->src = currentToken.value + "_" + std::to_string(moduleID);
 
     connection->label = "=";
 
@@ -130,7 +135,7 @@ void RTLILToDot::Generate_DOT()
     // 单元节点
     for (auto& cell : cells)
     {
-        dotFile << "  \"" << cell->ports["Y"] << "\" [shape=ellipse, color=blue];\n";
+        dotFile << "  \"" << cell->ports["Y"] << "\" [label=\"" << cell->ports["Y"] << "\"shape=ellipse, color=blue];\n";
         dotFile << "  \"" << cell->name << "\" [label=\"" << cell->type << "\", shape=box, style=filled, fillcolor=lightblue];\n";
         dotFile << "  \"" << cell->ports["A"] << "\" -> \"" << cell->name << "\" ;\n";
         dotFile << "  \"" << cell->ports["B"] << "\" -> \"" << cell->name << "\" ;\n";

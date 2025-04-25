@@ -37,6 +37,7 @@ private:
     std::vector<Connection*> connections;
     std::vector<Cell*> cells;
     bool inCell = false;
+    int moduleID=0;
 
 
     std::vector<Token> tokens;
@@ -48,6 +49,7 @@ public:
     void gen_output();
     void gen_cell();
     void gen_connection();
+    void gen_module();
     void Generate_DOT();
 
     RTLILToDot(Lexer& lexer);
