@@ -2,7 +2,7 @@
 #include<string>
 #include<vector>
 #include"Token.h"
-
+#pragma once
 class AstNode{
     public:
         std::string value;
