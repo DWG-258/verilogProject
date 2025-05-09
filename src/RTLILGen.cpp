@@ -241,12 +241,12 @@ void RTLILGen::generateIfStatement(AstNode* node) {//现在的if语句只支持a
             result += "end\n";
         }
         else {
-            result += "connect \\" + condition->value + " \\cond\n";
-            result += "end\n";
+            result += "connect \\cond  \\"+ condition->value+ "\n";
+           
         }
         if (statement->children[1]->children.size() == 0) {
-            result += "connect \\" + statement->children[0]->value + " \\" + statement->children[1]->value + "\n";
-            result += "end\n";
+            result += "connect \\" + new_temp() + " \\" + statement->children[1]->value + "\n";
+            
         }
         else {
             assign_helper(statement->children[1]);
@@ -257,16 +257,57 @@ void RTLILGen::generateIfStatement(AstNode* node) {//现在的if语句只支持a
         result += "connect \\A \\a\n";
         result += "connect \\B \\tmp" + std::to_string(temp_id) + "\n";
         result += "connect \\S \\cond\n";
-        result += "connect \\Y \\a\n";
+        result += "connect \\Y \\" + statement->children[0]->value + "\n";
         result += "end\n";
     }
     else if (len == 3) {
+        if (node->children[2]->value != "if") {//这就表示只有一层else语句
+            temp_id = 0;
+            AstNode* condition = node->children[0];
+            AstNode* statement = node->children[1];
+            AstNode* else_statement = node->children[2];
+            if (condition->type == "operator") {
+                result += "cell $" + to_operator_string(condition->value) + "$ "
+                    + to_operator_string(condition->value) + "$" + std::to_string(incre_num(to_operator_string(condition->value))) + "\n";
+                result += "connect \\A \\" + condition->children[0]->value + "\n";
+                result += "connect \\B \\" + condition->children[1]->value + "\n";
+                result += "connect \\Y \\cond\n";//这里的id必定是1
+                result += "end\n";
+            }
+            else {
+                result += "connect \\cond  \\" + condition->value + "\n";
 
+               
+            }
+
+            if (statement->children[1]->children.size() == 0) {
+                result += "connect \\" + new_temp() + " \\" + statement->children[1]->value + "\n";
+              
+            }
+            else {
+                assign_helper(statement->children[1]);
+            }
+
+            if (else_statement->children[1]->children.size() == 0) {
+                result += "connect \\" + new_temp() + " \\" + else_statement->children[1]->value + "\n";
+               
+            }
+            else {
+                assign_helper(else_statement->children[1]);
+            }
+
+            result += "cell $mux$ mux$" + std::to_string(++mul_num) + "\n";
+            result += "connect \\A \\tmp" + std::to_string(temp_id) + "\n";
+            result += "connect \\B \\tmp" + std::to_string(temp_id - 1) + "\n";
+            result += "connect \\S \\cond\n";
+            result += "connect \\Y \\"+ statement->children[0]->value+"\n";
+            result += "end\n";
+
+        }
+        else {//表示有多层else语句;递归调用
+
+        }
     }
-
-}
-void RTLILGen::generateElseStatement(AstNode* node) {
-
 }
 
 //获取Always中的变量
@@ -296,6 +337,7 @@ void RTLILGen::generateAlwaysStatementType1(AstNode* node)
             if (cond == nullptr || ifAssign == nullptr || elseAssign == nullptr)
             {
                 std::cerr << "There is no condition/ifAssign/elseAssign"<<std::endl;
+                exit(1);
             }
             resultInAlways += "  assisn " + ifAssign->children[0]->value + " undef\n";
             resultInAlways += "  switch " + cond->value + "\n";

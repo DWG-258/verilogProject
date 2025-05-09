@@ -81,28 +81,59 @@ void RTLILToDot::gen_output()
 
 void RTLILToDot::gen_cell()
 {
-    //should be type
-    currentToken = tokens[++currentTokenIndex];
-    Cell* cell = new Cell();
-    cell->type = currentToken.value + "_" + std::to_string(moduleID);
-
-    currentToken = tokens[++currentTokenIndex];
-    cell->name= currentToken.value + "_" + std::to_string(moduleID);
     
-    //输入
-    currentTokenIndex = currentTokenIndex + 3;
-    currentToken = tokens[currentTokenIndex];
-    cell->ports["A"] = currentToken.value+"_"+std::to_string(moduleID);
+    //should be type,get type
+    currentToken = tokens[++currentTokenIndex];
+    if(currentToken.value!="$mux$")
+    {
+        Cell* cell = new Cell();
+        cell->type = currentToken.value + "_" + std::to_string(moduleID);
 
-    currentTokenIndex = currentTokenIndex + 3;
-    currentToken = tokens[currentTokenIndex];
-    cell->ports["B"] = currentToken.value + "_" + std::to_string(moduleID);
-    //输出
-    currentTokenIndex = currentTokenIndex + 3;
-    currentToken = tokens[currentTokenIndex];
-    cell->ports["Y"] = currentToken.value + "_" + std::to_string(moduleID);
+        currentToken = tokens[++currentTokenIndex];
+        cell->name = currentToken.value + "_" + std::to_string(moduleID);
 
-    cells.push_back(cell);
+        //输入
+        currentTokenIndex = currentTokenIndex + 3;
+        currentToken = tokens[currentTokenIndex];
+        cell->ports["A"] = currentToken.value + "_" + std::to_string(moduleID);
+
+        currentTokenIndex = currentTokenIndex + 3;
+        currentToken = tokens[currentTokenIndex];
+        cell->ports["B"] = currentToken.value + "_" + std::to_string(moduleID);
+        //输出
+        currentTokenIndex = currentTokenIndex + 3;
+        currentToken = tokens[currentTokenIndex];
+        cell->ports["Y"] = currentToken.value + "_" + std::to_string(moduleID);
+
+        cells.push_back(cell);
+    }
+    else
+    {
+        Cell* cell = new Cell();
+        cell->type = currentToken.value + "_" + std::to_string(moduleID);
+
+        currentToken = tokens[++currentTokenIndex];
+        cell->name = currentToken.value + "_" + std::to_string(moduleID);
+
+        //输入
+        currentTokenIndex = currentTokenIndex + 3;
+        currentToken = tokens[currentTokenIndex];
+        cell->ports["A"] = currentToken.value + "_" + std::to_string(moduleID);
+
+        currentTokenIndex = currentTokenIndex + 3;
+        currentToken = tokens[currentTokenIndex];
+        cell->ports["B"] = currentToken.value + "_" + std::to_string(moduleID);
+
+        currentTokenIndex = currentTokenIndex + 3;
+        currentToken = tokens[currentTokenIndex];
+        cell->ports["S"] = currentToken.value + "_" + std::to_string(moduleID);
+        //输出
+        currentTokenIndex = currentTokenIndex + 3;
+        currentToken = tokens[currentTokenIndex];
+        cell->ports["Y"] = currentToken.value + "_" + std::to_string(moduleID);
+
+        cells.push_back(cell);
+    }
 }
 
 void RTLILToDot::gen_connection()
@@ -140,6 +171,8 @@ void RTLILToDot::Generate_DOT()
         dotFile << "  \"" << cell->ports["A"] << "\" -> \"" << cell->name << "\" ;\n";
         dotFile << "  \"" << cell->ports["B"] << "\" -> \"" << cell->name << "\" ;\n";
         dotFile << "  \"" << cell->name << "\" -> \"" << cell->ports["Y"] << "\" ;\n";
+        if((cell->ports.contains("S")))
+          dotFile << "  \"" << cell->ports["S"] << "\" -> \"" << cell->name << "\" ;\n";
         
     }
 

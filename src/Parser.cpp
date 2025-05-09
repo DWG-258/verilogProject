@@ -11,17 +11,26 @@ Parser::Parser(Lexer& lexer){
     tokens.push_back(token);//push back the END_OF_INPUT token
     currentTokenIndex=0;
     currentToken=tokens[currentTokenIndex];
+
+    //for (auto& i : tokens)
+    //{
+    //    std::cout <<i.value<< std::endl;
+    //}
 }
 
 AstNode* Parser::parseProgram(){
     AstNode* node=new AstNode();
     node->value="program";
-    while(currentToken.value!="endmodule") {
-        AstNode* child=parseModuleDeclaration();
-        if(child!=nullptr){
+    while(currentToken.type!= END_OF_INPUT)
+    {
+        AstNode* child = parseModuleDeclaration();
+        if (child != nullptr) {
             node->children.push_back(child);
         }
+        currentToken = tokens[++currentTokenIndex];
     }
+  
+
     return node;
 }
 
@@ -76,7 +85,7 @@ AstNode* Parser::parseModuleBody()
     AstNode* node = new AstNode();
     if (currentToken.type != TokenType::KEYWORD)
     {
-        std::cerr << "wrong keyword" << std::endl;
+        std::cerr << "wrong keyword:" << currentToken.value<<std::endl;
         exit(1);
     }
    //声明模块
@@ -130,7 +139,8 @@ AstNode* Parser::parsePortList()
     currentToken = tokens[++currentTokenIndex];
     if (currentToken.value != "(")
     {
-        std::cout << "wrong input" << std::endl;
+        std::cerr << "wrong input ports" << std::endl;
+        exit(1);
         return nullptr;
     }
     AstNode* node = new AstNode();
@@ -334,7 +344,7 @@ AstNode* Parser::parseStatement() {
 AstNode* Parser::parseIfStatement() {
     AstNode* node = new AstNode();
     node->value = "if";
-    node->type = "if";
+    node->type = "statement";
     currentToken = tokens[++currentTokenIndex];
     if (currentToken.type == BRACKET && currentToken.value == "(") {
         currentToken = tokens[++currentTokenIndex];
