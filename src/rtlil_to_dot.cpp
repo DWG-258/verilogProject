@@ -166,14 +166,44 @@ void RTLILToDot::Generate_DOT()
     // 单元节点
     for (auto& cell : cells)
     {
-        dotFile << "  \"" << cell->ports["Y"] << "\" [label=\"" << cell->ports["Y"] << "\"shape=ellipse, color=blue];\n";
-        dotFile << "  \"" << cell->name << "\" [label=\"" << cell->type << "\", shape=box, style=filled, fillcolor=lightblue];\n";
-        dotFile << "  \"" << cell->ports["A"] << "\" -> \"" << cell->name << "\" ;\n";
-        dotFile << "  \"" << cell->ports["B"] << "\" -> \"" << cell->name << "\" ;\n";
-        dotFile << "  \"" << cell->name << "\" -> \"" << cell->ports["Y"] << "\" ;\n";
-        if((cell->ports.contains("S")))
-          dotFile << "  \"" << cell->ports["S"] << "\" -> \"" << cell->name << "\" ;\n";
-        
+        std::ostringstream oss;
+        oss << "\"" << cell->name << "\" [\n";
+        oss << "  label=\"{ {";
+
+        std::vector<std::string> inputs, outputs;
+        for (const auto& [port, signal] : cell->ports) {
+            if (port == "Y") {
+                outputs.push_back("<" + port + "> " + port);
+            }
+            else {
+                inputs.push_back("<" + port + "> " + port);
+            }
+        }
+
+        for (size_t i = 0; i < inputs.size(); ++i) {
+            oss << inputs[i];
+            if (i + 1 < inputs.size()) oss << " | ";
+        }
+
+        oss << "} | " << cell->type << " | {";
+
+        for (size_t i = 0; i < outputs.size(); ++i) {
+            oss << outputs[i];
+            if (i + 1 < outputs.size()) oss << " | ";
+        }
+
+        oss << "} }\",\n";
+        oss << "  shape=record,\n";
+        oss << "  style=filled,\n";
+        oss << "  fillcolor=lightblue\n";
+        oss << "];\n";
+
+        dotFile << oss.str();
+        dotFile << "  \"" << cell->ports["A"] << "\" -> \"" << cell->name << "\":A ;\n";
+        dotFile << "  \"" << cell->ports["B"] << "\" -> \"" << cell->name << "\":B ;\n";
+        dotFile << "  \"" << cell->name << "\":Y -> \"" << cell->ports["Y"] << "\" ;\n";
+        if ((cell->ports.contains("S")))
+            dotFile << "  \"" << cell->ports["S"] << "\" -> \"" << cell->name << "\":S ;\n";
     }
 
     // 连接
