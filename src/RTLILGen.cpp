@@ -18,17 +18,27 @@ std::string RTLILGen::generateRTLIL() {
 void RTLILGen::generatePortList(AstNode* node) {//默认最后一个端口是输出端口
     node = node->children[0];//获取端口列表
     int size = node->children.size();
+    int output_loca = 0;
     if (node->children[size - 1] == nullptr) {
         size--;
     }
     for (int i = 0; i < size - 1; ++i) {
-        AstNode* port = node->children[i];
+        AstNode* port = node->children[i+1];
+        if (port->value == "output")
+        {
+            output_loca++;
+            break;
+        }
         result += "input width 1 \\" + port->value + "\n";
         portList.insert(port->value);
     }
-    AstNode* lastPort = node->children[size - 1];
-    result += "output width 1 \\" + lastPort->value + "\n";
-    portList.insert(lastPort->value);
+    
+    for(int i= output_loca; i < size - 1; ++i)
+    {
+        AstNode* lastPort = node->children[i+1];
+        result += "output width 1 \\" + lastPort->value + "\n";
+        portList.insert(lastPort->value);
+    }
 }
 
 void RTLILGen::generateModuleBody(AstNode* node) {
@@ -183,28 +193,45 @@ void RTLILGen::assign_helper(AstNode* node) {
     if (node->children[0]->type == "variable") {
         result += "connect \\A \\" + node->children[0]->value + "\n";
     }
+    else if (node->children[0]->type == "number") {
+        result += "connect \\A \\" + node->children[0]->value + "\n";
+    }
     else {
         if (node->children[1]->type != "variable") {
-            result += "connect \\A \\tmp" + std::to_string(temp_id - 1) + "\n";
+            result += "connect \\A \\tmp" + std::to_string(temp_id - 1) + "_" + std::to_string(tmp_cicle) + "\n";
         }
         else {
-            result += "connect \\A \\tmp" + std::to_string(temp_id) + "\n";
+            result += "connect \\A \\tmp" + std::to_string(temp_id) + "_" + std::to_string(tmp_cicle) + "\n";
         }
 
     }
     if (node->children[1]->type == "variable") {
         result += "connect \\B \\" + node->children[1]->value + "\n";
     }
-    else {
-        result += "connect \\B \\tmp" + std::to_string(temp_id) + "\n";
+    else if (node->children[1]->type == "number")
+    {
+        result += "connect \\B \\" + node->children[1]->value + "\n";
     }
-    result += "connect \\Y \\" + new_temp() + "\n";
+    else {
+        result += "connect \\B \\tmp_" + std::to_string(tmp_cicle) + std::to_string(temp_id) + "_" + std::to_string(tmp_cicle) + "\n";
+    }
+    result += "connect \\Y \\" + new_temp() + "_" + std::to_string(tmp_cicle) + "\n";
     result += "end\n";
 }
 
 
 void RTLILGen::generateAssignment(AstNode* node) {
     if (node->children[1]->children.size() == 0) {
+      
+        std::cout << node->children[1]->value.substr(0,1) << std::endl;
+        if (node->children[1]->value.substr(0,1) == "~") {
+            
+            result += "cell $not$ not$" + std::to_string(++not_num) + "\n";
+            result += "connect \\A \\" + node->children[1]->value.substr(1) + "\n";
+            result += "connect \\Y \\" + node->children[0]->value + "\n";
+            result += "end\n";
+            return;
+        }
         result += "connect \\" + node->children[0]->value + " \\" + node->children[1]->value + "\n";
         result += "end\n";
         return;
@@ -213,9 +240,10 @@ void RTLILGen::generateAssignment(AstNode* node) {
     std::string op = node->children[1]->value;
     std::vector<AstNode*> op_type;
     temp_id = 0;
+    tmp_cicle++;//每一次出现temp——id时都要加一
 
     assign_helper(node->children[1]);
-    result += "connect \\" + lhs + " \\tmp" + std::to_string(temp_id) + "\n";
+    result += "connect \\" + lhs + " \\tmp" + std::to_string(temp_id) + "_" + std::to_string(tmp_cicle) + "\n";
     /*result += "end\n";*/
 
 }
@@ -230,6 +258,7 @@ void RTLILGen::generateIfStatement(AstNode* node) {//现在的if语句只支持a
     }
     else if (len == 2) {
         temp_id = 0;//重置temp_id,使得每个if语句的临时变量不冲突
+        tmp_cicle++;
         AstNode* condition = node->children[0];
         AstNode* statement = node->children[1];
         if (condition->type == "operator") {
@@ -241,12 +270,12 @@ void RTLILGen::generateIfStatement(AstNode* node) {//现在的if语句只支持a
             result += "end\n";
         }
         else {
-            result += "connect \\cond  \\"+ condition->value+ "\n";
-           
+            result += "connect \\cond  \\" + condition->value + "\n";
+
         }
         if (statement->children[1]->children.size() == 0) {
-            result += "connect \\" + new_temp() + " \\" + statement->children[1]->value + "\n";
-            
+            result += "connect \\" + new_temp() + "_" + std::to_string(tmp_cicle) + " \\" + statement->children[1]->value + "\n";
+
         }
         else {
             assign_helper(statement->children[1]);
@@ -255,7 +284,7 @@ void RTLILGen::generateIfStatement(AstNode* node) {//现在的if语句只支持a
 
         result += "cell $mux$ mux$" + std::to_string(++mul_num) + "\n";
         result += "connect \\A \\a\n";
-        result += "connect \\B \\tmp" + std::to_string(temp_id) + "\n";
+        result += "connect \\B \\tmp" + std::to_string(temp_id) + "_" + std::to_string(tmp_cicle) + "\n";
         result += "connect \\S \\cond\n";
         result += "connect \\Y \\" + statement->children[0]->value + "\n";
         result += "end\n";
@@ -263,6 +292,7 @@ void RTLILGen::generateIfStatement(AstNode* node) {//现在的if语句只支持a
     else if (len == 3) {
         if (node->children[2]->value != "if") {//这就表示只有一层else语句
             temp_id = 0;
+            tmp_cicle++;
             AstNode* condition = node->children[0];
             AstNode* statement = node->children[1];
             AstNode* else_statement = node->children[2];
@@ -277,30 +307,30 @@ void RTLILGen::generateIfStatement(AstNode* node) {//现在的if语句只支持a
             else {
                 result += "connect \\cond  \\" + condition->value + "\n";
 
-               
+
             }
 
             if (statement->children[1]->children.size() == 0) {
-                result += "connect \\" + new_temp() + " \\" + statement->children[1]->value + "\n";
-              
+                result += "connect \\" + new_temp() + "_" + std::to_string(tmp_cicle) + " \\" + statement->children[1]->value + "\n";
+
             }
             else {
                 assign_helper(statement->children[1]);
             }
 
             if (else_statement->children[1]->children.size() == 0) {
-                result += "connect \\" + new_temp() + " \\" + else_statement->children[1]->value + "\n";
-               
+                result += "connect \\" + new_temp() + "_" + std::to_string(tmp_cicle) + " \\" + else_statement->children[1]->value + "\n";
+
             }
             else {
                 assign_helper(else_statement->children[1]);
             }
 
             result += "cell $mux$ mux$" + std::to_string(++mul_num) + "\n";
-            result += "connect \\A \\tmp" + std::to_string(temp_id) + "\n";
-            result += "connect \\B \\tmp" + std::to_string(temp_id - 1) + "\n";
+            result += "connect \\A \\tmp_" + std::to_string(tmp_cicle) + std::to_string(temp_id) + "\n";
+            result += "connect \\B \\tmp_" + std::to_string(tmp_cicle) + std::to_string(temp_id - 1) + "\n";
             result += "connect \\S \\cond\n";
-            result += "connect \\Y \\"+ statement->children[0]->value+"\n";
+            result += "connect \\Y \\" + statement->children[0]->value + "\n";
             result += "end\n";
 
         }
@@ -319,7 +349,7 @@ void RTLILGen::getAlwaysVariable(AstNode* node)
     }
     for (AstNode* child : node->children)
     {
-      
+
         getAlwaysVariable(child);
     }
 }
@@ -336,20 +366,20 @@ void RTLILGen::generateAlwaysStatementType1(AstNode* node)
             AstNode* elseAssign = child->children[2]; // y = b
             if (cond == nullptr || ifAssign == nullptr || elseAssign == nullptr)
             {
-                std::cerr << "There is no condition/ifAssign/elseAssign"<<std::endl;
+                std::cerr << "There is no condition/ifAssign/elseAssign" << std::endl;
                 exit(1);
             }
             resultInAlways += "  assisn " + ifAssign->children[0]->value + " undef\n";
             resultInAlways += "  switch " + cond->value + "\n";
             resultInAlways += "  case 1'1 \n";
-            resultInAlways +="  assign "+ifAssign->children[0]->value+" "+ifAssign->children[1]->value+"\n";
+            resultInAlways += "  assign " + ifAssign->children[0]->value + " " + ifAssign->children[1]->value + "\n";
             resultInAlways += "  case 1'2 \n";
-            resultInAlways += "  assign " + elseAssign->children[0]->value + " " + elseAssign->children[1]->value+"\n";
+            resultInAlways += "  assign " + elseAssign->children[0]->value + " " + elseAssign->children[1]->value + "\n";
             resultInAlways += " end\n";
         }
-       
+
     }
-    result += resultInAlways+ "end\n";
+    result += resultInAlways + "end\n";
 
 
 }
@@ -365,34 +395,23 @@ void RTLILGen::generateAlwaysStatement(AstNode* node) {
     }
     //如果是其他逻辑
 
-  
+
 }
 
 
 void RTLILGen::generateInitialStatement(AstNode* node) {
-    resultInInitial += "process $initial$top$"+std::to_string(processID) + "\n";
-        for (AstNode* child : node->children) {
-            if (child->type == "assign") {
-                AstNode* Assign = child; // y = 0
-                if (Assign==nullptr)
-                {
-                    std::cerr << "There is no Assign" << std::endl;
-                }
-                resultInInitial+= "  assign " + Assign->children[0]->value + " " + Assign->children[1]->value + "\n";
+    resultInInitial += "process $initial$top$" + std::to_string(processID) + "\n";
+    for (AstNode* child : node->children) {
+        if (child->type == "assign") {
+            AstNode* Assign = child; // y = 0
+            if (Assign == nullptr)
+            {
+                std::cerr << "There is no Assign" << std::endl;
             }
-
+            resultInInitial += "  assign " + Assign->children[0]->value + " " + Assign->children[1]->value + "\n";
         }
+
+    }
     result += resultInInitial + "end\n";
 
 }
-void RTLILGen::generateExpression(AstNode* node) {
-
-}
-void RTLILGen::generateBinaryExpression(AstNode* node) {
-
-}
-void RTLILGen::generateUnaryExpression(AstNode* node) {
-
-}
-
-

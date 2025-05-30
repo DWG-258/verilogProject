@@ -12,10 +12,10 @@
 
 
 
-class RTLILToDot
+class RtlilTrans
 {
 private:
- 
+    std::string moudle_name;
 
     struct Cell {
         std::string name;
@@ -38,7 +38,11 @@ private:
     std::vector<Cell*> cells;
     bool inCell = false;
     int moduleID=0;
-
+    //用于判断cell是否存在中间值
+    bool has_temp = false;
+    //用于记录级联表达式的参数个数
+    int and_var_num = 0;
+    int or_var_num = 0;
 
     std::vector<Token> tokens;
     size_t currentTokenIndex;
@@ -51,6 +55,16 @@ public:
     void gen_connection();
     void gen_module();
     void Generate_DOT();
+    void genrate_blif();
+    Cell* find_temp(Cell* cell);
 
-    RTLILToDot(Lexer& lexer);
+    std::string get_rid_of_str(std::string& s)
+    {
+        if (!s.empty() && s[0] == '\\') {
+            s = s.substr(1);
+        }
+        return s;
+    }
+
+    RtlilTrans(Lexer& lexer);
 };
