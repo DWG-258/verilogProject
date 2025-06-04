@@ -76,7 +76,7 @@ int main(){
     //生成blif文件
     RTLILTODOT.genrate_blif();
 
-    cout << "5" << endl;
+ //RCS
    ILP ilp;
   std::string filename="blifoutput.txt";
   ilp.set_delay_map({{"AND",1},{"OR",1},{"NOT",1}});
@@ -85,7 +85,26 @@ int main(){
   constraints["AND"]=2;
   constraints["OR"]=1;
   constraints["NOT"]=2;
-  ilp.make_constraints(constraints);
+  ilp.make_RCS_constraints(constraints);
+
+  //LCS
+  //ILP ilp;
+  //std::map<std::string, size_t> delay_map = {
+  //   {"AND",1},
+  //   {"OR",1},
+  //   {"NOT",1}
+  //};
+  //std::map<std::string, int> areas = {
+  //    {"AND",2},
+  //    {"OR",3},
+  //    {"NOT",1}
+  //};
+  //ilp.set_delay_map(delay_map);
+  //ilp.read_blif("./input/sample.blif");
+  //ilp.make_LCS_constraints(7, areas);
+  //solver s;
+  //s.read_file("./output/output1.lp");
+  //s.glpk_solver();
 
 
 

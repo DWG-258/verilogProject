@@ -11,6 +11,7 @@
 #include "helper.h"
 class ILP {
     std::map<std::string, size_t> delay_map;//是一个延迟表，存储每一种元件的延迟
+    std::map<std::string, size_t> resource_index;
     std::set<node*> nodes;
     std::set<std::string> variables_collection;
     node* find_node(const std::string& name);
@@ -21,5 +22,6 @@ public:
         this->delay_map = delay_map;
     }
     void read_blif(const std::string& filename);
-    void make_constraints(std::map<std::string, int>& constraints);
+    void make_RCS_constraints(std::map<std::string, int>& constraints);
+    void make_LCS_constraints(int max_time, std::map<std::string, int>& areas);
 };
