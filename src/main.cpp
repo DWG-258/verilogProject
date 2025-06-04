@@ -5,6 +5,12 @@
 #include"../include/Optimization.h"
 #include"../include/ILP.h"
 #include"../include/Node.h"
+#include"../include/ML_RCS.h"
+#include"../include/MR_LCS.h"
+#include"../include/Blif.h"
+#include <fstream>
+using namespace std;
+map<string, int> ComsumingTime = { {"and", 2},{"or", 3},{"not", 1} };
 
 std::string  readFileAsString(const std::string& filename)
 {
@@ -70,7 +76,7 @@ int main(){
     //生成blif文件
     RTLILTODOT.genrate_blif();
 
-
+    cout << "5" << endl;
    ILP ilp;
   std::string filename="blifoutput.txt";
   ilp.set_delay_map({{"AND",1},{"OR",1},{"NOT",1}});
@@ -81,6 +87,48 @@ int main(){
   constraints["NOT"]=2;
   ilp.make_constraints(constraints);
 
+
+
+  string Path = "blifoutput.txt";
+  ifstream blifInformation(Path);
+  //这里有问题,需要修改
+  cout << "2" << endl;
+  Netlist* netlist = ReadBlif(blifInformation);
+  cout << "3" << endl;
+
+  // ML_RCS算法
+  unordered_map<string, int>Resouces = { {"and",2},{"or",1},{"not",1} };
+
+  int delta = ML_RCS_Schedule(netlist->NetlistGates, Resouces);
+
+  PrintSchedule(netlist);
+  cout << "Minimize Cycle: " << delta + 1 << endl;
+
+  // 重置网表状态
+  for (auto& GatePair : netlist->NetlistGates) {
+      GatePair.second->IsScheduled = false;
+      GatePair.second->IsWorking = false;
+      GatePair.second->WorkingTimeLength = 0;
+      GatePair.second->level = -1;
+  }
+
+  // MR_LCS算法
+  int DeadlineCycle = delta + 1; // 使用ML_RCS的结果作为延迟约束
+  unordered_map<string, int> MinResources = MR_LCS_Schedule(netlist->NetlistGates, DeadlineCycle);
+
+  if (MinResources.empty()) {
+      cout << "无法在给定的延迟约束内完成调度！" << endl;
+  }
+  else {
+      PrintSchedule(netlist);
+      cout << "在延迟约束 " << DeadlineCycle << " 内的最小资源需求：" << endl;
+      for (auto& resource : MinResources) {
+          cout << resource.first << ": " << resource.second << endl;
+      }
+  }
+
+  system("pause");
+  delete netlist;
     return 0;
 
 }

@@ -43,7 +43,7 @@ void RtlilTrans::genrate_blif()
     std::string temp_var = "A"+std::to_string(temp_id);
     int cell_var_count = 0;
 
-    //将多个只有2个输入端口的有中间值的cell合并
+    //将多个只�?2个输入端口的有中间值的cell合并
     for (auto it = cells.begin(); it != cells.end();++it)
     {
         //与门
@@ -97,7 +97,7 @@ void RtlilTrans::genrate_blif()
             ++it;
         }
     }
-    //过滤有tmp开头的cell和字符串来消除中间值
+    //过滤有tmp开头的cell和字符串来消除中间�?
     for (auto& cell : cells) {
 
         //与门
@@ -115,7 +115,7 @@ void RtlilTrans::genrate_blif()
             }
             out <<  "\n";
             std::string and_output = "";
-            // 用于生成name下方的1
+            // 用于生成name下方�?1
             for (int i = 1; i <= cell_var_count-1; i++)
             {
                 and_output=and_output + "1";
@@ -173,7 +173,7 @@ void RtlilTrans::genrate_blif()
     }
 
 
-    out << ".end\n";
+    out << ".end";
 
 
     
